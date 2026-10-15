@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 # The address of your local FastAPI backend
-API_URL = "http://127.0.0.1:8000"
+API_URL = "https://hackathon-idea-tracker.onrender.com"
 
 st.title("💡 AI Hackathon Idea Tracker")
 st.write("Generate, save, and manage your startup ideas.")
