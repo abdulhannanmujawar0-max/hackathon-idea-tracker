@@ -1,16 +1,8 @@
-import os
 import requests
+import sqlite3
+import random
 
-ideas = []
-file_name = "ideas.txt"
-
-# READ: Load existing ideas
-if os.path.exists(file_name):
-    with open(file_name, "r") as file:
-        for line in file:
-            ideas.append(line.strip())
-
-print("Welcome to the Hackathon Idea Tracker!")
+print("Welcome to the Hackathon Idea Tracker (Database Edition)!")
 
 while True:
     print("\n--- Main Menu ---")
@@ -24,54 +16,59 @@ while True:
     
     if choice == '1':
         new_idea = input("Type your hackathon idea: ")
-        ideas.append(new_idea)
-        with open(file_name, "a") as file:
-            file.write(new_idea + "\n")
-        print("Success! Idea saved permanently.")
+        
+        # 1. Connect to DB
+        conn = sqlite3.connect("ideas.db")
+        cursor = conn.cursor()
+        
+        # 2. Execute SQL INSERT
+        cursor.execute("INSERT INTO hackathon_ideas (title) VALUES (?)", (new_idea,))
+        
+        # 3. Save and close
+        conn.commit()
+        conn.close()
+        print("Success! Idea saved to the database.")
         
     elif choice == '2':
-        print("\n--- Your Ideas ---")
-        if len(ideas) == 0:
+        print("\n--- Your Database Ideas ---")
+        conn = sqlite3.connect("ideas.db")
+        cursor = conn.cursor()
+        
+        # SQL SELECT to grab all rows
+        cursor.execute("SELECT id, title, status FROM hackathon_ideas")
+        rows = cursor.fetchall() 
+        conn.close()
+        
+        if len(rows) == 0:
             print("No ideas yet. Try adding one!")
         else:
-            for index, idea in enumerate(ideas, 1):
-                print(f"{index}. {idea}")
+            for row in rows:
+                # row[0] is ID, row[1] is title, row[2] is status
+                print(f"ID {row[0]}: {row[1]} (Status: {row[2]})")
                 
     elif choice == '3':
-        print("\n--- Delete an Idea ---")
-        if len(ideas) == 0:
-            print("No ideas to delete.")
-        else:
-            for index, idea in enumerate(ideas, 1):
-                print(f"{index}. {idea}")
+        del_id = input("Enter the EXACT ID number of the idea to delete: ")
+        
+        if del_id.isdigit():
+            conn = sqlite3.connect("ideas.db")
+            cursor = conn.cursor()
             
-            del_choice = input("Enter the number of the idea to delete: ")
+            # SQL DELETE
+            cursor.execute("DELETE FROM hackathon_ideas WHERE id = ?", (int(del_id),))
+            conn.commit()
             
-            if del_choice.isdigit():
-                del_index = int(del_choice) - 1 
-                if 0 <= del_index < len(ideas):
-                    deleted_idea = ideas.pop(del_index) 
-                    
-                    with open(file_name, "w") as file:
-                        for idea in ideas:
-                            file.write(idea + "\n")
-                    print(f"Success! Deleted: '{deleted_idea}'")
-                else:
-                    print("Error: That number is not in the list.")
+            if cursor.rowcount > 0:
+                print(f"Success! Idea ID {del_id} deleted.")
             else:
-                print("Error: Please enter a valid number.")
+                print("Error: That ID does not exist.")
+            conn.close()
+        else:
+            print("Error: Please enter a valid number.")
 
     elif choice == '4':
-        import random  # Python's built-in tool for random numbers
-        
         print("\nFetching an idea from the cloud...")
-        
-        # Pick a random number between 1 and 100
         product_id = random.randint(1, 100)
-        
-        # Inject our random number into the API URL
-        url = f"https://dummyjson.com/products/{product_id}"
-        response = requests.get(url)
+        response = requests.get(f"https://dummyjson.com/products/{product_id}")
         
         if response.status_code == 200:
             data = response.json()
@@ -79,15 +76,16 @@ while True:
             print(f"💡 Suggestion: {random_idea}")
             
             save_choice = input("Do you want to save this idea? (y/n): ")
-            
             if save_choice.lower() == 'y':
-                ideas.append(random_idea)
-                with open(file_name, "a") as file:
-                    file.write(random_idea + "\n")
-                print("Success! Internet idea saved to your list.")
+                conn = sqlite3.connect("ideas.db")
+                cursor = conn.cursor()
+                cursor.execute("INSERT INTO hackathon_ideas (title) VALUES (?)", (random_idea,))
+                conn.commit()
+                conn.close()
+                print("Success! Internet idea saved to the database.")
         else:
             print(f"Error connecting to the API. Status code: {response.status_code}")
-            print(f"Server response: {response.text}")
+
     elif choice == '5':
         print("Goodbye!")
         break
