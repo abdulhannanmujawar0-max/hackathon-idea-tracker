@@ -1,54 +1,44 @@
 import streamlit as st
 import requests
 
-# The address of your local FastAPI backend
-API_URL = "https://hackathon-idea-tracker.onrender.com"
+# Set up the API URL (Make sure this matches your FastAPI backend URL)
+API_URL = "https://hackathon-idea-tracker.onrender.com/generate"
 
-st.title("💡 AI Hackathon Idea Tracker")
-st.write("Generate, save, and manage your startup ideas.")
+# Create the two tabs
+tab1, tab2 = st.tabs(["🚀 Pitch Generator", "💾 Export Hub"])
 
-st.divider()
-
-# --- Section 1: Generate Ideas ---
-st.subheader("1. Brainstorm with Gemini")
-topic = st.text_input("Enter a target industry or topic (e.g., Healthcare, Finance):")
-
-# This creates a clickable button
-if st.button("Generate & Save AI Pitch"):
-    if topic:
-        # Show a loading spinner while waiting for the AI
-        with st.spinner("Thinking..."):
-            # Send the data to your FastAPI POST route
-            response = requests.post(f"{API_URL}/generate", json={"name": topic})
-            
-            if response.status_code == 200:
-                data = response.json()
-                st.success("Pitch generated and saved to database!")
-                st.info(data["pitch"])
-            else:
-                st.error("Backend error. Is your FastAPI server running?")
-    else:
-        st.warning("Please enter a topic first.")
-
-st.divider()
-
-# --- Section 2: View Database ---
-st.subheader("2. Your Idea Vault")
-
-# A button to fetch the latest data from the database
-if st.button("Load Saved Ideas"):
-    response = requests.get(f"{API_URL}/ideas")
+# --- TAB 1: YOUR ORIGINAL APP ---
+with tab1:
+    st.header("Generate Your Next Big Idea")
+    topic = st.text_input("Enter a topic (e.g., Finance, EdTech):")
     
-    if response.status_code == 200:
-        data = response.json()
-        ideas = data.get("ideas", [])
-        
-        if len(ideas) == 0:
-            st.write("No ideas saved yet.")
+    if st.button("Generate & Save AI Pitch"):
+        if topic:
+            try:
+                # Send the request to your FastAPI backend
+                response = requests.post(API_URL, json={"topic": topic})
+                
+                if response.status_code == 200:
+                    st.success("Pitch generated successfully!")
+                    st.write(response.json())
+                else:
+                    st.error("Backend error. Is your FastAPI server running?")
+            except Exception as e:
+                st.error("Could not connect to the backend.")
         else:
-            # Loop through the database rows and display them
-            for idea in reversed(ideas): # Show newest first
-                st.markdown(f"**ID {idea['id']}**: {idea['title']}")
-                st.write("---")
-    else:
-        st.error("Could not connect to database.")
+            st.warning("Please enter a topic first.")
+
+# --- TAB 2: THE NEW EXPORT FEATURE ---
+with tab2:
+    st.header("Download Your Pitches")
+    st.write("Ready to export your pitch for the judges?")
+    
+    # Placeholder text for the download button
+    ai_pitch_text = "Here is the brilliant AI startup pitch..."
+    
+    st.download_button(
+        label="Download Pitch as .txt",
+        data=ai_pitch_text,
+        file_name="hackathon_pitch.txt",
+        mime="text/plain"
+    )
